@@ -12,6 +12,7 @@ import threading
 import time
 import os
 import traceback
+import test_seq
 
 CONFIG_FILE = "settings.conf"
 CONFIG_SECTION = "settings"
@@ -166,11 +167,12 @@ def process_data(threadName, q):
           data = q.get()
           script_text = "mvn -Dtest="+ inverse_map[int(data)]+" test"
           directory = "cd " + test_orch_object.test_dir
-          #print directory + ";" + script_text
+          print directory + ";" + script_text
 
           #out = os.popen(directory+ ";" +script_text)
 
           queueLock.acquire()
+          # print out.readlines()[-6]
           #print threadName, list(workQueue.queue)
           finished_list.append(int(data))
           for edges in dictionary_list[int(data)]:
@@ -208,9 +210,8 @@ class myThread (threading.Thread):
 def parallel_executor(node_list):
     # This is responsible for the parallel execution of the test cases
     # Get the node list from the calling function and use it to fill the inital queue for execution
-    start_time = time.time()
-    print "start time : ", start_time
-    logger.info("start time ",start_time)
+
+    #logger.info("start time ",start_time)
     global exitFlag
     global threadID
     logger.info("Starting the parallel execution")
@@ -238,11 +239,27 @@ def parallel_executor(node_list):
     for thread in threads:
         thread.join()
     print "Exiting Main Thread"
-    end_time =  time.time()
-    print "end time : " , end_time
-    print "elapsed time ", end_time-start_time
-    logger.info("end time ",end_time)
-    logger.info("Elapsed time :",end_time-start_time)
+
+    #logger.info("end time ",end_time)
+    #logger.info("Elapsed time :",end_time-start_time)
+
+
+def get_test_cases(lablel_map):
+    # Takes the label map as the input to find the test cases that has to be executed in sequence
+    logger.info("Checking for sequential test cases")
+    path = test_orch_object.test_dir
+    fileName = "test-execution-order"
+    complete_name = path + fileName
+    f = open(complete_name, 'r')
+    difference_list= []
+    file_list = []
+    for line in f:
+        # The script section
+        item = line.strip("\n")
+        if item not in label_map.keys():
+            file_list.append(item)
+
+    return file_list
 
 if __name__ == '__main__':
     csv_object = read_csv()
@@ -251,9 +268,25 @@ if __name__ == '__main__':
     csv_object2 = read_csv() # To reinitialize the object as the old object would be closed
     dictionary_list = test_orch_object.adjacency_list_generator(csv_object2,label_map)
     reverse_list = test_orch_object.reverse_adjacency(dictionary_list)
+    #print dictionary_list
     node_list = test_orch_object.node_list_generator(reverse_list)
     #print node_list
+    sequence_list = get_test_cases(label_map)
+    start_time = time.time()
+    print "start time : ", start_time
+    if len(sequence_list) > 0:
+        test_seq.get_test_cases(test_orch_object.test_dir,sequence_list)
+
     parallel_executor(node_list)
+
+    end_time = time.time()
+    print "end time : ", end_time
+    print "elapsed time ", end_time - start_time
+
+    #print sequence_list
+    #print len(sequence_list)
+
+
 
 
 

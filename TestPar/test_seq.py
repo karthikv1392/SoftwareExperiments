@@ -25,30 +25,39 @@ def find_sequential():
     print "sequential"
 
 
-def get_test_cases(test_dir):
+def get_test_cases(test_dir,test_list=None):
     #path = "/Users/karthik/Documents/GSSI_Coursework/core/Software/Testing/pradet-replication/experimental-study/xmlsecurity/"
-    path = test_dir
-    fileName = "test-execution-order"
-    complete_name = path + fileName
-    f = open(complete_name, 'r')
-    difference_list= []
-    file_list = []
-    for line in f:
-        # The script section
-        split_text = line.strip("\n").split('.')
-        last_text = line.rsplit('.', 1)[0]
-        file_list.append(line.strip("\n"))
-        # print last_text + "#" + split_text[-1]
-        new_text = last_text + "#" + split_text[-1]
+    if test_list is None:
+        path = test_dir
+        fileName = "test-execution-order"
+        complete_name = path + fileName
+        f = open(complete_name, 'r')
+        difference_list= []
+        file_list = []
+        for line in f:
+            # The script section
+            split_text = line.strip("\n").split('.')
+            last_text = line.rsplit('.', 1)[0]
+            file_list.append(line.strip("\n"))
+            # print last_text + "#" + split_text[-1]
+            new_text = last_text + "#" + split_text[-1]
 
-        script_text = "mvn -Dtest="+new_text+ " test"
-        #print script_text
-        directory = "cd " + test_dir
+            script_text = "mvn -Dtest="+new_text+ " test"
+            #print script_text
+            directory = "cd " + test_dir
 
-        command =  directory + ";"+script_text
-        #print command
-        #out = os.popen(command)
-        #print out.readlines()[-5]
+            command =  directory + ";"+script_text
+            print command
+            #out = os.popen(command)
+            #print out.readlines()[-5]
+    else:
+        for test_item in test_list:
+            script_text = "mvn -Dtest=" + test_item + " test"
+            directory = "cd " + test_dir
+            command = directory + ";" + script_text
+            print command
+            # out = os.popen(command)
+            # print out.readlines()[-5]
 
     #print file_list
 
