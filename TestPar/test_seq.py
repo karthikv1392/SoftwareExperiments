@@ -47,17 +47,20 @@ def get_test_cases(test_dir,test_list=None):
             directory = "cd " + test_dir
 
             command =  directory + ";"+script_text
-            print command
-            #out = os.popen(command)
-            #print out.readlines()[-5]
+            #print command
+            out = os.popen(command)
+            print out.readlines()[-5]
     else:
         for test_item in test_list:
-            script_text = "mvn -Dtest=" + test_item + " test"
+            split_text = test_item.split('.')
+            last_text = test_item.rsplit('.', 1)[0]
+            new_text = last_text + "#" + split_text[-1]
+            script_text = "mvn -Dtest=" + new_text + " test"
             directory = "cd " + test_dir
             command = directory + ";" + script_text
-            print command
-            # out = os.popen(command)
-            # print out.readlines()[-5]
+            #print command
+            os.system(command)
+            #print out.readlines()[-5]
 
     #print file_list
 
