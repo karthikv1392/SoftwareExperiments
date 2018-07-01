@@ -27,7 +27,8 @@ queue_list = []   # To keep track of the elements in the queue
 dictionary_list = [] # For providing the reverse mapping
 global thread_list   # for the threads to be filled
 thread_list = []
-
+global sequence_list
+sequence_list = []  # To store the nodes in sequence
 threads = [] # To keep track of the running threads
 
 class Test_Orchestrator():
@@ -147,7 +148,7 @@ class Test_Orchestrator():
 
         csv_obj2 = read_csv()
         for row2 in csv_obj2:
-            adjacency_map[label_map[row2[0]]].append(label_map[row2[1]])
+            adjacency_map[label_map[row2[1]]].append(label_map[row2[0]])
 
         return adjacency_map
 
@@ -167,7 +168,8 @@ def process_data(threadName, q):
           data = q.get()
           script_text = "mvn -Dtest="+ inverse_map[int(data)]+" test"
           directory = "cd " + test_orch_object.test_dir
-          print directory + ";" + script_text
+
+          #print directory + ";" + script_text
 
           #out = os.popen(directory+ ";" +script_text)
 
@@ -175,11 +177,14 @@ def process_data(threadName, q):
           # print out.readlines()[-6]
           #print threadName, list(workQueue.queue)
           finished_list.append(int(data))
-          for edges in dictionary_list[int(data)]:
-              if edges not in finished_list and edges not in queue_list:
-                  q.put(edges)
-                  queue_list.append(edges)
+          if int(data) in dictionary_list.keys():
+              for edges in dictionary_list[int(data)]:
+                  if edges not in finished_list and edges not in queue_list:
+                      q.put(edges)
+                      queue_list.append(edges)
+          #print list(q.queue)
           queueLock.release()
+
           logger.info("%s processing test case%s" % (threadName, data))
 
 def read_csv():
@@ -262,20 +267,47 @@ def get_test_cases(lablel_map):
     return file_list
 
 if __name__ == '__main__':
+
+    #global sequence_list
     csv_object = read_csv()
     label_map = test_orch_object.label_generator(csv_object)
+
+    sequence_list = get_test_cases(label_map)
+
+    # add all the nodes to the lab;
+    start_key = max(label_map.values()) + 1
+    for test in sequence_list:
+        label_map[test] = start_key
+        start_key = start_key + 1
+
     inverse_map = test_orch_object.inverse_label_generator(label_map)
+
     csv_object2 = read_csv() # To reinitialize the object as the old object would be closed
     dictionary_list = test_orch_object.adjacency_list_generator(csv_object2,label_map)
+    print dictionary_list
     reverse_list = test_orch_object.reverse_adjacency(dictionary_list)
+    print reverse_list
+    #dictionary_list = reverse_list
     #print dictionary_list
     node_list = test_orch_object.node_list_generator(reverse_list)
+    print node_list
     #print node_list
-    sequence_list = get_test_cases(label_map)
+    #print node_list
+
+    #print len(dictionary_list.keys())
+    #print len(sequence_list)
+
+    #print set(sequence_list).intersection(set(dictionary_list.keys()))    # to verify the correctness
+
     start_time = time.time()
     print "start time : ", start_time
-    if len(sequence_list) > 0:
-        test_seq.get_test_cases(test_orch_object.test_dir,sequence_list)
+    #print sequence_list
+    #print label_map.keys()
+    #if len(sequence_list) > 0:
+    #    test_seq.get_test_cases(test_orch_object.test_dir,sequence_list)
+
+    for node in sequence_list:
+        node_list.append(label_map[node])
 
     parallel_executor(node_list)
 
