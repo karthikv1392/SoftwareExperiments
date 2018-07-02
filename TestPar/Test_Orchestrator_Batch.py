@@ -29,6 +29,8 @@ global thread_list   # for the threads to be filled
 thread_list = []
 global dep_nodes
 dep_nodes = []
+global label_map
+label_map = {}
 global sequence_list
 sequence_list = []  # To store the nodes in sequence
 threads = [] # To keep track of the running threads
@@ -153,7 +155,7 @@ class Test_Orchestrator():
 
         csv_obj2 = read_csv()
         for row2 in csv_obj2:
-            adjacency_map[label_map[row2[0]]].append(label_map[row2[1]])
+            adjacency_map[label_map[row2[1]]].append(label_map[row2[0]])
 
         return adjacency_map
 
@@ -162,30 +164,32 @@ class Test_Orchestrator():
 test_orch_object = Test_Orchestrator() # Instantiate the object to call the calss to create the inverse  map
 # Better to keep the thread processing outside the class
 # Add the threading logic here
-workQueue = Queue.Queue(400)
+workQueue = Queue.Queue(2000)
 queueLock = threading.Lock()  # For accessing the critical region when performing the writes
 
 
 def process_data(threadName, q):
    while not exitFlag:
-      #queueLock.acquire()
+      queueLock.acquire()
       if not workQueue.empty():
           #queueLock.acquire()
           data = q.get()
-          #queueLock.release()
 
-          script_text = "mvn -Dtest="+ inverse_map[int(data)]+" test"
+          queueLock.release()
+
+          script_text = "mvn -Dtest=" + inverse_map[int(data)] + " test"
           directory = "cd " + test_orch_object.test_dir
 
-          print directory + ";" + script_text
+
 
 
           #out = os.popen(directory+ ";" +script_text)
           #print threadName, list(workQueue.queue)
 
           # print out.readlines()[-6]
-
+          print directory + ";" + script_text
           queueLock.acquire()
+
           #if int(data) in dictionary_list.keys():
           finished_list.append(int(data))
           for edges in dictionary_list[int(data)]:
@@ -195,6 +199,8 @@ def process_data(threadName, q):
           queueLock.release()
 
           logger.info("%s processing test case%s" % (threadName, data))
+      else:
+          queueLock.release()
 
 def read_csv():
     # Reads the csv and returns the file object
@@ -243,10 +249,13 @@ def parallel_executor(node_list):
     queueLock.release()
 
     # Wait for queue to empty
-    while not workQueue.empty():
+    while not (len(finished_list) == len(label_map.keys())):
         pass
 
+    #print finished_list
+    #print dictionary_list.keys()
     # Notify threads it's time to exit
+
     exitFlag = 1
 
     # Wait for all threads to complete
@@ -285,21 +294,22 @@ if __name__ == '__main__':
     #print sequence_list
     # add all the nodes to the lab;
     start_key = max(label_map.values()) + 1
-    #for test in sequence_list:
-    #    label_map[test] = start_key
-    #    start_key = start_key + 1
+    for test in sequence_list:
+        label_map[test] = start_key
+        start_key = start_key + 1
 
     inverse_map = test_orch_object.inverse_label_generator(label_map)
 
     csv_object2 = read_csv() # To reinitialize the object as the old object would be closed
     dictionary_list = test_orch_object.adjacency_list_generator(csv_object2,label_map)
+    print dictionary_list
     dep_nodes = dictionary_list.keys()
     reverse_list = test_orch_object.reverse_adjacency(dictionary_list)
-    #print reverse_list
+    print reverse_list
     #dictionary_list = reverse_list
     #print dictionary_list
     node_list = test_orch_object.node_list_generator(reverse_list)
-    #print node_list
+    print node_list
     #print node_list
     #print node_list
 
@@ -310,13 +320,15 @@ if __name__ == '__main__':
 
     start_time = time.time()
     print "start time : ", start_time
+
     #print sequence_list
     #print label_map.keys()
     #if len(sequence_list) > 0:
     #    test_seq.get_test_cases(test_orch_object.test_dir,sequence_list)
 
-    for node in sequence_list:
-        node_list.append(label_map[node])
+    #for node in sequence_list:
+    #    node_list.append(label_map[node])
+
     #node_list.reverse()
     parallel_executor(node_list)
 
